@@ -19,11 +19,3 @@ func TestDepthMeasurementCounter(t *testing.T) {
 		t.Fatalf(msg, actual, expected)
 	}
 }
-
-/* func BenchmarkHey(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for _, tt := range testCases {
-			Hey(tt.input)
-		}
-	}
-} */
