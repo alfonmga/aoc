@@ -3,7 +3,7 @@ package main
 import "testing"
 
 func TestSubmarineDiagnosticReport(t *testing.T) {
-	expected := int64(198)
+	expected := int64(230)
 	actual := SubmarineDiagnosticReport(`00100
 11110
 10110
@@ -16,7 +16,7 @@ func TestSubmarineDiagnosticReport(t *testing.T) {
 11001
 00010
 01010`)
-	if actual != expected {
+	if actual[1] != expected {
 		msg := `
 	Result: %v
 	Expected result: %v`

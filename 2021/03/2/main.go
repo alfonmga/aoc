@@ -66,15 +66,25 @@ func calculateEpsilonRateByBlob(blob []string) string {
 	return epsilonRate
 }
 
-func SubmarineDiagnosticReport(input string) int64 {
+func determineOxigenGeneratorRating(blob []string) string {
+	return "0"
+}
+func determineC02ScrubberRating(blob []string) string {
+	return "0"
+}
+
+func SubmarineDiagnosticReport(input string) []int64 {
 	diagnosticReportBlob := strings.Split(input, "\n")
 
 	gammaRate := calculateGammaRateByBlob(diagnosticReportBlob)
 	epsilonRate := calculateEpsilonRateByBlob(diagnosticReportBlob)
-
 	powerConsumption := binaryToDecimal(gammaRate) * binaryToDecimal(epsilonRate)
 
-	return powerConsumption
+	oxigenGeneratorRating := determineOxigenGeneratorRating(diagnosticReportBlob)
+	c02ScrubberRating := determineC02ScrubberRating(diagnosticReportBlob)
+	lifeSupportRating := binaryToDecimal(oxigenGeneratorRating) * binaryToDecimal(c02ScrubberRating)
+
+	return []int64{powerConsumption, lifeSupportRating}
 }
 
 func main() {
@@ -82,5 +92,5 @@ func main() {
 	handleError(err)
 	inputStr := string(inputBlob)
 	result := SubmarineDiagnosticReport(inputStr)
-	fmt.Printf("Current submarine power cosumption [%v].", result)
+	fmt.Printf("Submarine power cosumption [%v]\nSubmarine life support rating [%v]", result[0], result[1])
 }
