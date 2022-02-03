@@ -1,8 +1,33 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-func TestSubmarineDiagnosticReport(t *testing.T) {
+func TestSubmarineOxygenGeneratorRating(t *testing.T) {
+	expected := int64(23)
+	actual := CalcOxigenGeneratorRating(strings.Split(`00100
+11110
+10110
+10111
+10101
+01111
+00111
+11100
+10000
+11001
+00010
+01010`, "\n"))
+	if BinaryToDecimal(actual) != expected {
+		msg := `
+	Result: %v
+	Expected result: %v`
+		t.Fatalf(msg, actual, expected)
+	}
+}
+
+func TestSubmarineDiagnosticReportLifeSupportRating(t *testing.T) {
 	expected := int64(230)
 	actual := SubmarineDiagnosticReport(`00100
 11110
@@ -20,6 +45,6 @@ func TestSubmarineDiagnosticReport(t *testing.T) {
 		msg := `
 	Result: %v
 	Expected result: %v`
-		t.Fatalf(msg, actual, expected)
+		t.Fatalf(msg, actual[1], expected)
 	}
 }

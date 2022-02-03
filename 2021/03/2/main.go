@@ -13,7 +13,7 @@ func handleError(e error) {
 	}
 }
 
-func binaryToDecimal(bN string) int64 {
+func BinaryToDecimal(bN string) int64 {
 	n, err := strconv.ParseInt(bN, 2, 64)
 	handleError(err)
 	return n
@@ -62,14 +62,35 @@ func calculateEpsilonRateByBlob(blob []string) string {
 			epsilonRate += "0"
 		}
 	}
-
 	return epsilonRate
 }
 
-func determineOxigenGeneratorRating(blob []string) string {
-	return "0"
+func CalcOxigenGeneratorRating(blob []string) string {
+	var currentBitPos = 0
+	var currentBytes = blob
+	for 1 < len(currentBytes) {
+
+		currentBitPosBytesGroupedByBitDic := make(map[int][]string)
+		for i := 0; i < len(currentBytes); i++ {
+			bit, err := strconv.Atoi(strings.Split(currentBytes[i], "")[currentBitPos])
+			handleError(err)
+			currentBitPosBytesGroupedByBitDic[bit] = append(currentBitPosBytesGroupedByBitDic[bit], currentBytes[i])
+		}
+
+		if len(currentBitPosBytesGroupedByBitDic[0]) > len(currentBitPosBytesGroupedByBitDic[1]) {
+			currentBytes = currentBitPosBytesGroupedByBitDic[0]
+		} else if len(currentBitPosBytesGroupedByBitDic[0]) < len(currentBitPosBytesGroupedByBitDic[1]) {
+			currentBytes = currentBitPosBytesGroupedByBitDic[1]
+		} else {
+			currentBytes = currentBitPosBytesGroupedByBitDic[1]
+		}
+
+		currentBitPos++
+	}
+
+	return currentBytes[0]
 }
-func determineC02ScrubberRating(blob []string) string {
+func calcC02ScrubberRating(blob []string) string {
 	return "0"
 }
 
@@ -78,11 +99,11 @@ func SubmarineDiagnosticReport(input string) []int64 {
 
 	gammaRate := calculateGammaRateByBlob(diagnosticReportBlob)
 	epsilonRate := calculateEpsilonRateByBlob(diagnosticReportBlob)
-	powerConsumption := binaryToDecimal(gammaRate) * binaryToDecimal(epsilonRate)
+	powerConsumption := BinaryToDecimal(gammaRate) * BinaryToDecimal(epsilonRate)
 
-	oxigenGeneratorRating := determineOxigenGeneratorRating(diagnosticReportBlob)
-	c02ScrubberRating := determineC02ScrubberRating(diagnosticReportBlob)
-	lifeSupportRating := binaryToDecimal(oxigenGeneratorRating) * binaryToDecimal(c02ScrubberRating)
+	oxigenGeneratorRating := CalcOxigenGeneratorRating(diagnosticReportBlob)
+	c02ScrubberRating := calcC02ScrubberRating(diagnosticReportBlob)
+	lifeSupportRating := BinaryToDecimal(oxigenGeneratorRating) * BinaryToDecimal(c02ScrubberRating)
 
 	return []int64{powerConsumption, lifeSupportRating}
 }
