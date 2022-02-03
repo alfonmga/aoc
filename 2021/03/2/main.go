@@ -90,8 +90,30 @@ func CalcOxigenGeneratorRating(blob []string) string {
 
 	return currentBytes[0]
 }
-func calcC02ScrubberRating(blob []string) string {
-	return "0"
+func CalcC02ScrubberRating(blob []string) string {
+	var currentBitPos = 0
+	var currentBytes = blob
+	for 1 < len(currentBytes) {
+
+		currentBitPosBytesGroupedByBitDic := make(map[int][]string)
+		for i := 0; i < len(currentBytes); i++ {
+			bit, err := strconv.Atoi(strings.Split(currentBytes[i], "")[currentBitPos])
+			handleError(err)
+			currentBitPosBytesGroupedByBitDic[bit] = append(currentBitPosBytesGroupedByBitDic[bit], currentBytes[i])
+		}
+
+		if len(currentBitPosBytesGroupedByBitDic[0]) < len(currentBitPosBytesGroupedByBitDic[1]) {
+			currentBytes = currentBitPosBytesGroupedByBitDic[0]
+		} else if len(currentBitPosBytesGroupedByBitDic[0]) > len(currentBitPosBytesGroupedByBitDic[1]) {
+			currentBytes = currentBitPosBytesGroupedByBitDic[1]
+		} else {
+			currentBytes = currentBitPosBytesGroupedByBitDic[0]
+		}
+
+		currentBitPos++
+	}
+
+	return currentBytes[0]
 }
 
 func SubmarineDiagnosticReport(input string) []int64 {
@@ -102,7 +124,7 @@ func SubmarineDiagnosticReport(input string) []int64 {
 	powerConsumption := BinaryToDecimal(gammaRate) * BinaryToDecimal(epsilonRate)
 
 	oxigenGeneratorRating := CalcOxigenGeneratorRating(diagnosticReportBlob)
-	c02ScrubberRating := calcC02ScrubberRating(diagnosticReportBlob)
+	c02ScrubberRating := CalcC02ScrubberRating(diagnosticReportBlob)
 	lifeSupportRating := BinaryToDecimal(oxigenGeneratorRating) * BinaryToDecimal(c02ScrubberRating)
 
 	return []int64{powerConsumption, lifeSupportRating}
