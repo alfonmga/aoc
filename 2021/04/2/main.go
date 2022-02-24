@@ -14,7 +14,7 @@ func handleError(e error) {
 	}
 }
 
-func hasWinningBingoCombination(drawnNumbers map[int]int, candidateNumbers []int) bool {
+func hasWinningBingoCombination(drawnNumbers map[int]bool, candidateNumbers []int) bool {
 	var hasWinCombination = false
 	for idx, v := range candidateNumbers {
 		_, found := drawnNumbers[v]
@@ -29,7 +29,7 @@ func hasWinningBingoCombination(drawnNumbers map[int]int, candidateNumbers []int
 	return hasWinCombination
 }
 
-func calcWinningBoardScore(drawnNumbers map[int]int, lastDrawnNumber int, boardNumbers []int) int {
+func calcWinningBoardScore(drawnNumbers map[int]bool, lastDrawnNumber int, boardNumbers []int) int {
 	var unmarkedBoardNumbers []int
 	for _, v := range boardNumbers {
 		_, isNumberMarked := drawnNumbers[v]
@@ -79,17 +79,18 @@ func PlayBingo(bingoInputStr string) (score int) {
 		bingoBoards = append(bingoBoards, currentBoardNumbers)
 	}
 
-	var drawnBingoNumbers = make(map[int]int)
-	var winningBoardScore int
+	var drawnBingoNumbers = make(map[int]bool)
+	wonBoards := make(map[int]bool, len(bingoBoards))
+	var lastBoardWinningScore int
 	for _, announcedBingoNumber := range toBeAnnouncedBingoNumbers {
-		drawnBingoNumbers[announcedBingoNumber] = announcedBingoNumber
+		drawnBingoNumbers[announcedBingoNumber] = true
 
 		if len(drawnBingoNumbers) < 5 {
 			continue // There cannot be winners if less than 5 numbers have been drawn!
 		}
 
 		hasWinningBoard := false
-		for _, bingoBoardNumbers := range bingoBoards {
+		for bingoBoardIdx, bingoBoardNumbers := range bingoBoards {
 			hasWinningCombination := false
 
 			// check rows wins
@@ -123,9 +124,22 @@ func PlayBingo(bingoInputStr string) (score int) {
 			}
 
 			if hasWinningCombination {
-				hasWinningBoard = true
-				winningBoardScore = calcWinningBoardScore(drawnBingoNumbers, announcedBingoNumber, bingoBoardNumbers)
-				break
+				_, thisBoardAlreadyWon := wonBoards[bingoBoardIdx]
+				if !thisBoardAlreadyWon {
+					wonBoards[bingoBoardIdx] = true
+					numBoardsWon := 0
+					for _, v := range wonBoards {
+						if v {
+							numBoardsWon += 1
+						}
+					}
+					if numBoardsWon == len(bingoBoards) {
+						hasWinningBoard = true
+						lastBoardWinningScore = calcWinningBoardScore(drawnBingoNumbers, announcedBingoNumber, bingoBoardNumbers)
+						break
+					}
+				}
+
 			}
 		}
 		if hasWinningBoard {
@@ -133,12 +147,12 @@ func PlayBingo(bingoInputStr string) (score int) {
 		}
 	}
 
-	return winningBoardScore
+	return lastBoardWinningScore
 }
 
 func main() {
 	inputBlob, err := ioutil.ReadFile("input.txt")
 	handleError(err)
 	score := PlayBingo(string(inputBlob))
-	fmt.Printf("The winning bingo board score was: %v", score)
+	fmt.Printf("The last bingo board to win score was: %v", score)
 }
