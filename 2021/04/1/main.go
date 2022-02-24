@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -13,9 +14,48 @@ func handleError(e error) {
 	}
 }
 
-func CalcWinningBingoBoardScore(bingoInputStr string) (score int64) {
+func hasWinningBingoCombination(drawnNumbers map[int]int, candidateNumbers []int) bool {
+	var hasWinCombination = false
+	for idx, v := range candidateNumbers {
+		_, found := drawnNumbers[v]
+		if !found {
+			break
+		}
+		if idx == 4 {
+			hasWinCombination = true
+		}
+	}
+
+	return hasWinCombination
+}
+
+func calcWinningBoardScore(drawnNumbers map[int]int, lastDrawnNumber int, boardNumbers []int) int {
+	var unmarkedBoardNumbers []int
+	for _, v := range boardNumbers {
+		_, isNumberMarked := drawnNumbers[v]
+		if !isNumberMarked {
+			unmarkedBoardNumbers = append(unmarkedBoardNumbers, v)
+		}
+	}
+	var sumUnmarkedNumbers = 0
+	for _, v := range unmarkedBoardNumbers {
+		sumUnmarkedNumbers += v
+	}
+
+	return sumUnmarkedNumbers * lastDrawnNumber
+}
+
+func PlayBingo(bingoInputStr string) (score int) {
 	bingoInputStrLines := strings.Split(bingoInputStr, "\n")
-	announcedBingoNumbers := bingoInputStrLines[0]
+
+	toBeAnnouncedBingoNumbersInput := bingoInputStrLines[0]
+	toBeAnnouncedBingoNumbersStr := strings.Split(toBeAnnouncedBingoNumbersInput, ",")
+	var toBeAnnouncedBingoNumbers []int
+	for _, nStr := range toBeAnnouncedBingoNumbersStr {
+		nInt, err := strconv.Atoi(nStr)
+		handleError(err)
+		toBeAnnouncedBingoNumbers = append(toBeAnnouncedBingoNumbers, nInt)
+	}
 
 	bingoBoardsInput := bingoInputStrLines[2:]
 	var bingoBoards [][]int
@@ -28,7 +68,8 @@ func CalcWinningBingoBoardScore(bingoInputStr string) (score int64) {
 		i = i + 5
 		var currentBoardNumbers []int
 		for x := 0; x < len(currentBoardLines); x++ {
-			currentBoardLinesRow := strings.Split(strings.ReplaceAll(currentBoardLines[x], "  ", " "), " ")
+			re := regexp.MustCompile(`\d+`)
+			currentBoardLinesRow := re.FindAllString(currentBoardLines[x], -1)
 			for _, n := range currentBoardLinesRow {
 				vInt, err := strconv.Atoi(n)
 				handleError(err)
@@ -38,19 +79,93 @@ func CalcWinningBingoBoardScore(bingoInputStr string) (score int64) {
 		bingoBoards = append(bingoBoards, currentBoardNumbers)
 	}
 
-	bingoBoardsMarkedNumbers = make(map[int][]int)
-	for _, announcedBingoNumber := range announcedBingoNumbers {
-		// 1. check each board to see if it contains this number
-		// 2. If the board contains it then check winning combinations
-		// 3. If contains winning combinations then calculate winning score
+	var drawnBingoNumbers = make(map[int]int)
+	var winningBoardScore int
+	for _, announcedBingoNumber := range toBeAnnouncedBingoNumbers {
+		drawnBingoNumbers[announcedBingoNumber] = announcedBingoNumber
+
+		if len(drawnBingoNumbers) < 5 {
+			continue // There cannot be winners if less than 5 numbers have been drawn!
+		}
+
+		hasWinningBoard := false
+		for _, bingoBoardNumbers := range bingoBoards {
+
+			// check rows wins
+			hasWinningRow := false
+			for i := 0; i < 5; i++ {
+				rowHeadPos := i * 5
+				candidateRowNumbers := bingoBoardNumbers[rowHeadPos : rowHeadPos+5]
+
+				var hasWinCombination = false
+				for idx, v := range candidateRowNumbers {
+					_, found := drawnBingoNumbers[v]
+					if !found {
+						break
+					}
+					if idx == 4 {
+						hasWinCombination = true
+					}
+				}
+				if hasWinCombination {
+					var unmarkedBoardNumbers []int
+					for _, v := range bingoBoardNumbers {
+						_, isNumberMarked := drawnBingoNumbers[v]
+						if !isNumberMarked {
+							unmarkedBoardNumbers = append(unmarkedBoardNumbers, v)
+						}
+					}
+					var sumUnmarkedNumbers = 0
+					for _, v := range unmarkedBoardNumbers {
+						sumUnmarkedNumbers += v
+					}
+
+					winningBoardScore = sumUnmarkedNumbers * announcedBingoNumber
+					hasWinningRow = true
+					break
+				}
+			}
+			if hasWinningRow {
+				hasWinningBoard = true
+				break
+			}
+
+			// check columns wins
+			hasWinningColumn := false
+			for i := 0; i < 5; i++ {
+				columnHeadPos := i
+				var candidateColumnNumbers []int
+				for x := 0; x < 5; x++ {
+					targetIdx := columnHeadPos
+					if x > 0 {
+						targetIdx += x * 5
+					}
+					candidateColumnNumbers = append(candidateColumnNumbers, bingoBoardNumbers[targetIdx])
+				}
+
+				if hasWinningBingoCombination(drawnBingoNumbers, candidateColumnNumbers) {
+					winningBoardScore = calcWinningBoardScore(drawnBingoNumbers, announcedBingoNumber, bingoBoardNumbers)
+					hasWinningColumn = true
+					break
+				}
+
+			}
+			if hasWinningColumn {
+				hasWinningBoard = true
+				break
+			}
+		}
+		if hasWinningBoard {
+			break
+		}
 	}
 
-	return 0
+	return winningBoardScore
 }
 
 func main() {
 	inputBlob, err := ioutil.ReadFile("input.txt")
 	handleError(err)
-	score := CalcWinningBingoBoardScore(string(inputBlob))
-	fmt.Printf("Winning bingo board score is: %v", score)
+	score := PlayBingo(string(inputBlob))
+	fmt.Printf("The winning bingo board score was: %v", score)
 }
