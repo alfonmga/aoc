@@ -97,30 +97,8 @@ func PlayBingo(bingoInputStr string) (score int) {
 				rowHeadPos := i * 5
 				candidateRowNumbers := bingoBoardNumbers[rowHeadPos : rowHeadPos+5]
 
-				var hasWinCombination = false
-				for idx, v := range candidateRowNumbers {
-					_, found := drawnBingoNumbers[v]
-					if !found {
-						break
-					}
-					if idx == 4 {
-						hasWinCombination = true
-					}
-				}
-				if hasWinCombination {
-					var unmarkedBoardNumbers []int
-					for _, v := range bingoBoardNumbers {
-						_, isNumberMarked := drawnBingoNumbers[v]
-						if !isNumberMarked {
-							unmarkedBoardNumbers = append(unmarkedBoardNumbers, v)
-						}
-					}
-					var sumUnmarkedNumbers = 0
-					for _, v := range unmarkedBoardNumbers {
-						sumUnmarkedNumbers += v
-					}
-
-					winningBoardScore = sumUnmarkedNumbers * announcedBingoNumber
+				if hasWinningBingoCombination(drawnBingoNumbers, candidateRowNumbers) {
+					winningBoardScore = calcWinningBoardScore(drawnBingoNumbers, announcedBingoNumber, bingoBoardNumbers)
 					hasWinningRow = true
 					break
 				}
