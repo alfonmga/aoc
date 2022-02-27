@@ -55,7 +55,52 @@ func CalcPointLinesOverlap(input string) int {
 		}
 
 		// add the mark points between line segments
-		// TODO: implement this!
+		diffXCoord := lineSegmentCoordX1 - lineSegmentCoordX2
+		diffYCoord := lineSegmentCoordY1 - lineSegmentCoordY2
+
+		if diffXCoord != 0 {
+			var targetCoord int
+			var startCoord int
+			if lineSegmentCoordX1 > lineSegmentCoordX2 {
+				targetCoord = lineSegmentCoordX1
+				startCoord = lineSegmentCoordX2
+			} else {
+				targetCoord = lineSegmentCoordX2
+				startCoord = lineSegmentCoordX1
+			}
+
+			if targetCoord-startCoord > 1 {
+				for {
+					startCoord++
+					currentPointsToMark = append(currentPointsToMark, []int{startCoord, lineSegmentCoordY1})
+					if startCoord == targetCoord-1 {
+						break
+					}
+				}
+			}
+
+		}
+		if diffYCoord != 0 {
+			var targetCoord int
+			var startCoord int
+			if lineSegmentCoordY1 > lineSegmentCoordY2 {
+				targetCoord = lineSegmentCoordY1
+				startCoord = lineSegmentCoordY2
+			} else {
+				targetCoord = lineSegmentCoordY2
+				startCoord = lineSegmentCoordY1
+			}
+
+			if targetCoord-startCoord > 1 {
+				for {
+					startCoord++
+					currentPointsToMark = append(currentPointsToMark, []int{lineSegmentCoordX1, startCoord})
+					if startCoord == targetCoord-1 {
+						break
+					}
+				}
+			}
+		}
 
 		// mark points in the map
 		for _, currentPointToMark := range currentPointsToMark {
