@@ -2,8 +2,8 @@ package main
 
 import "testing"
 
-func TestCalcPointLinesOverlap(t *testing.T) {
-	expected := 5
+func TestCalcPointLinesOverlapDiagonal(t *testing.T) {
+	expected := 12
 	actual := CalcPointLinesOverlap(`0,9 -> 5,9
 8,0 -> 0,8
 9,4 -> 3,4
