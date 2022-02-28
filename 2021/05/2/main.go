@@ -8,19 +8,45 @@ import (
 	"strings"
 )
 
+type Point struct {
+	x int
+	y int
+}
+type Line struct {
+	slope int
+	yint  int
+}
+
 func handleError(e error) {
 	if e != nil {
 		panic(e)
 	}
 }
 
+func CreateLine(a, b Point) Line {
+	slope := (b.y - a.y) / (b.x - a.x)
+	yint := a.y - slope*a.x
+	return Line{slope, yint}
+}
+func EvalX(l Line, x int) int {
+	return l.slope*x + l.yint
+}
+func Intersection(l1, l2 Line) (Point, bool) {
+	if l1.slope == l2.slope {
+		return Point{}, false
+	}
+	x := (l2.yint - l1.yint) / (l1.slope - l2.slope)
+	y := EvalX(l1, x)
+	return Point{x, y}, true
+}
+
 func CalcPointLinesOverlap(input string) int {
 	inputSplitted := strings.Split(strings.ReplaceAll(input, " ", ""), "\n")
 
-	var lineSegmentsCoords [][][]int
+	var linesSegments [][]Point
 	for _, v := range inputSplitted {
 		lineSegmentsCoordsStr := strings.Split(v, "->")
-		var currentLineSegmentCoords [][]int
+		var currentLineSegmentCoords []Point
 		for _, s := range lineSegmentsCoordsStr {
 			currentLineSegmentsCoordsStr := strings.Split(s, ",")
 			var currentLineSegmentsCoords []int
@@ -29,154 +55,63 @@ func CalcPointLinesOverlap(input string) int {
 				handleError(err)
 				currentLineSegmentsCoords = append(currentLineSegmentsCoords, coord)
 			}
-			currentLineSegmentCoords = append(currentLineSegmentCoords, currentLineSegmentsCoords)
+			currentLineSegmentCoords = append(currentLineSegmentCoords, Point{int(currentLineSegmentsCoords[0]), int(currentLineSegmentsCoords[1])})
 		}
-		lineSegmentsCoords = append(lineSegmentsCoords, currentLineSegmentCoords)
+		linesSegments = append(linesSegments, currentLineSegmentCoords)
 	}
 
-	pointsMap := make(map[int]map[int]int)
-	for _, lineSegmentCoords := range lineSegmentsCoords {
-		lineSegmentCoordX1 := lineSegmentCoords[0][0]
-		lineSegmentCoordY1 := lineSegmentCoords[0][1]
-		lineSegmentCoordX2 := lineSegmentCoords[1][0]
-		lineSegmentCoordY2 := lineSegmentCoords[1][1]
+	intersectionPointsMap := make(map[int]map[int]int)
 
-		deltaX := lineSegmentCoordX2 - lineSegmentCoordX1
-		deltaY := lineSegmentCoordY2 - lineSegmentCoordY1
+	for lineSegmentsIdx, lineSegments := range linesSegments {
+		lineSegment1 := Point{lineSegments[0].x, lineSegments[0].y}
+		lineSegment2 := Point{lineSegments[1].x, lineSegments[1].y}
 
-		rad := math.Atan2(float64(deltaY), float64(deltaX))
-		deg := rad * (180 / math.Pi)
+		deltaX := lineSegment2.x - lineSegment1.x
+		deltaY := lineSegment2.y - lineSegment1.y
 
-		isVerticalOrHorizontal := math.Abs(deg) == 0 || math.Abs(deg) == 90 || math.Abs(deg) == 135 || math.Abs(deg) == 180
-		isDiagonalCoords := deg == 45
+		lineRad := math.Atan2(float64(deltaY), float64(deltaX))
+		lineDeg := lineRad * (180 / math.Pi)
 
-		if !isDiagonalCoords && !isVerticalOrHorizontal {
+		if lineSegmentCoordX1 != lineSegmentCoordX2 && lineSegmentCoordY1 != lineSegmentCoordY2 {
 			continue
 		}
 
-		var currentPointsToMark [][]int
+		line := CreateLine(Point{lineSegments[0].x, lineSegments[0].y}, Point{lineSegments[0].x, lineSegments[1].y})
 
-		// add the mark points at the ends of the line segments
-		for _, lineSegmentCoord := range lineSegmentCoords {
-			x := lineSegmentCoord[0]
-			y := lineSegmentCoord[1]
-			currentPointsToMark = append(currentPointsToMark, []int{x, y})
-		}
-
-		// add the mark points between line segments
-		if isDiagonalCoords {
-			isAscX := lineSegmentCoordX1 < lineSegmentCoordX2
-			isAscY := lineSegmentCoordY1 < lineSegmentCoordY2
-			var targetXCoord int
-			var startXCoord int
-			var startYCoord int
-			var stopAt int
-			if isAscX {
-				targetXCoord = lineSegmentCoordX2
-				startXCoord = lineSegmentCoordX1
-				startYCoord = lineSegmentCoordY1
-				stopAt = targetXCoord
-			} else {
-				targetXCoord = lineSegmentCoordX2
-				startXCoord = lineSegmentCoordX1
-				startYCoord = lineSegmentCoordY1
-				stopAt = targetXCoord + 1
+		for targetLineSegmentsIdx, targetLineSegments := range linesSegments {
+			if lineSegmentsIdx == targetLineSegmentsIdx {
+				continue
 			}
+			targetLine := CreateLine(Point{targetLineSegments[0].x, targetLineSegments[0].y}, Point{targetLineSegments[0].x, targetLineSegments[1].y})
 
-			pointsAway := targetXCoord - startXCoord
-			if pointsAway != 1 {
-				for {
-					if isAscX {
-						startXCoord++
-						if isAscY {
-							startYCoord++
-						} else {
-							startYCoord--
-						}
+			intersectedPoint, intersected := Intersection(line, targetLine)
+			if intersected {
+				_, hasYPointCoord := intersectionPointsMap[intersectedPoint.y]
+				if hasYPointCoord {
+					prevXpointVal, hasXPointCoord := intersectionPointsMap[intersectedPoint.y][intersectedPoint.x]
+					if hasXPointCoord {
+						intersectionPointsMap[intersectedPoint.y][intersectedPoint.x] = prevXpointVal + 1
 					} else {
-						startXCoord--
-						startYCoord++
+						intersectionPointsMap[intersectedPoint.y][intersectedPoint.x] = 1
 					}
-
-					currentPointsToMark = append(currentPointsToMark, []int{startXCoord, startYCoord})
-
-					if startXCoord == stopAt {
-						break
-					}
+				} else {
+					intersectionPointsMap[intersectedPoint.y] = make(map[int]int)
+					intersectionPointsMap[intersectedPoint.y][intersectedPoint.x] = 1
 				}
 			}
-		} else {
-			if deltaX != 0 {
-				var targetCoord int
-				var startCoord int
-				if lineSegmentCoordX1 > lineSegmentCoordX2 {
-					targetCoord = lineSegmentCoordX1
-					startCoord = lineSegmentCoordX2
-				} else {
-					targetCoord = lineSegmentCoordX2
-					startCoord = lineSegmentCoordX1
-				}
 
-				if targetCoord-startCoord > 1 {
-					for {
-						startCoord++
-						currentPointsToMark = append(currentPointsToMark, []int{startCoord, lineSegmentCoordY1})
-						if startCoord == targetCoord-1 {
-							break
-						}
-					}
-				}
-			} else if deltaY != 0 {
-				var targetCoord int
-				var startCoord int
-				if lineSegmentCoordY1 > lineSegmentCoordY2 {
-					targetCoord = lineSegmentCoordY1
-					startCoord = lineSegmentCoordY2
-				} else {
-					targetCoord = lineSegmentCoordY2
-					startCoord = lineSegmentCoordY1
-				}
-
-				if targetCoord-startCoord > 1 {
-					for {
-						startCoord++
-						currentPointsToMark = append(currentPointsToMark, []int{lineSegmentCoordX1, startCoord})
-						if startCoord == targetCoord-1 {
-							break
-						}
-					}
-				}
-			}
 		}
 
-		// mark points in the map
-		for _, currentPointToMark := range currentPointsToMark {
-			_, hasYPointCoord := pointsMap[currentPointToMark[1]]
-			if hasYPointCoord {
-				prevXpointVal, hasXPointCoord := pointsMap[currentPointToMark[1]][currentPointToMark[0]]
-				if hasXPointCoord {
-					pointsMap[currentPointToMark[1]][currentPointToMark[0]] = prevXpointVal + 1
-				} else {
-					pointsMap[currentPointToMark[1]][currentPointToMark[0]] = 1
-				}
-			} else {
-				pointsMap[currentPointToMark[1]] = make(map[int]int)
-				pointsMap[currentPointToMark[1]][currentPointToMark[0]] = 1
-			}
-		}
 	}
 
-	// count lines point overlap
-	overlapCount := 0
-	for _, yPoints := range pointsMap {
+	intersectionsCounter := 0
+	for _, yPoints := range intersectionPointsMap {
 		for _, xPoints := range yPoints {
-			if xPoints > 1 {
-				overlapCount += 1
-			}
+			intersectionsCounter += xPoints
 		}
 	}
 
-	return overlapCount
+	return intersectionsCounter
 }
 
 func main() {
