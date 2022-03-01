@@ -3,18 +3,72 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
-	"strconv"
 	"strings"
 )
 
-type Point struct {
-	x int
-	y int
+type Point struct{ X, Y int }
+type Segment struct{ P1, P2 Point }
+
+func minMax(x1, x2 int) (int, int) {
+	if x1 <= x2 {
+		return x1, x2
+	}
+	return x2, x1
 }
-type Line struct {
-	slope int
-	yint  int
+
+func CalcPointLinesOverlap(input string) int {
+	visited := map[Point]int{}
+
+	data := strings.Split(input, "\n")
+	var segments = make([]Segment, len(data))
+	for i, l := range data {
+		fmt.Sscanf(l, "%d,%d -> %d,%d", &segments[i].P1.X, &segments[i].P1.Y, &segments[i].P2.X, &segments[i].P2.Y)
+	}
+
+	for _, s := range segments {
+
+		switch {
+
+		// vertical
+		case s.P1.X == s.P2.X:
+			minY, maxY := minMax(s.P1.Y, s.P2.Y)
+			for y := minY; y <= maxY; y++ {
+				visited[Point{s.P1.X, y}]++
+			}
+
+		// horizontal
+		case s.P1.Y == s.P2.Y:
+			minX, maxY := minMax(s.P1.X, s.P2.X)
+			for x := minX; x <= maxY; x++ {
+				visited[Point{x, s.P1.Y}]++
+			}
+
+		// diagonal
+		default:
+			delta := abs(s.P1.X - s.P2.X)
+
+			x, y := s.P1.X, s.P1.Y
+			mx, my := sign(s.P2.X-s.P1.X), sign(s.P2.Y-s.P1.Y)
+
+			for i := 0; i <= delta; i++ {
+				visited[Point{x + i*mx, y + i*my}]++
+			}
+		}
+	}
+
+	count := 0
+	for _, v := range visited {
+		if v >= 2 {
+			count++
+		}
+	}
+	return count
+}
+
+func main() {
+	inputBlob, err := ioutil.ReadFile("input.txt")
+	handleError(err)
+	fmt.Printf("At %v points at least two lines overlap.", CalcPointLinesOverlap(string(inputBlob)))
 }
 
 func handleError(e error) {
@@ -22,100 +76,15 @@ func handleError(e error) {
 		panic(e)
 	}
 }
-
-func CreateLine(a, b Point) Line {
-	slope := (b.y - a.y) / (b.x - a.x)
-	yint := a.y - slope*a.x
-	return Line{slope, yint}
-}
-func EvalX(l Line, x int) int {
-	return l.slope*x + l.yint
-}
-func Intersection(l1, l2 Line) (Point, bool) {
-	if l1.slope == l2.slope {
-		return Point{}, false
+func abs(i int) int {
+	if i >= 0 {
+		return i
 	}
-	x := (l2.yint - l1.yint) / (l1.slope - l2.slope)
-	y := EvalX(l1, x)
-	return Point{x, y}, true
+	return -i
 }
-
-func CalcPointLinesOverlap(input string) int {
-	inputSplitted := strings.Split(strings.ReplaceAll(input, " ", ""), "\n")
-
-	var linesSegments [][]Point
-	for _, v := range inputSplitted {
-		lineSegmentsCoordsStr := strings.Split(v, "->")
-		var currentLineSegmentCoords []Point
-		for _, s := range lineSegmentsCoordsStr {
-			currentLineSegmentsCoordsStr := strings.Split(s, ",")
-			var currentLineSegmentsCoords []int
-			for _, z := range currentLineSegmentsCoordsStr {
-				coord, err := strconv.Atoi(z)
-				handleError(err)
-				currentLineSegmentsCoords = append(currentLineSegmentsCoords, coord)
-			}
-			currentLineSegmentCoords = append(currentLineSegmentCoords, Point{int(currentLineSegmentsCoords[0]), int(currentLineSegmentsCoords[1])})
-		}
-		linesSegments = append(linesSegments, currentLineSegmentCoords)
+func sign(i int) int {
+	if i >= 0 {
+		return +1
 	}
-
-	intersectionPointsMap := make(map[int]map[int]int)
-
-	for lineSegmentsIdx, lineSegments := range linesSegments {
-		lineSegment1 := Point{lineSegments[0].x, lineSegments[0].y}
-		lineSegment2 := Point{lineSegments[1].x, lineSegments[1].y}
-
-		deltaX := lineSegment2.x - lineSegment1.x
-		deltaY := lineSegment2.y - lineSegment1.y
-
-		lineRad := math.Atan2(float64(deltaY), float64(deltaX))
-		lineDeg := lineRad * (180 / math.Pi)
-
-		if lineSegmentCoordX1 != lineSegmentCoordX2 && lineSegmentCoordY1 != lineSegmentCoordY2 {
-			continue
-		}
-
-		line := CreateLine(Point{lineSegments[0].x, lineSegments[0].y}, Point{lineSegments[0].x, lineSegments[1].y})
-
-		for targetLineSegmentsIdx, targetLineSegments := range linesSegments {
-			if lineSegmentsIdx == targetLineSegmentsIdx {
-				continue
-			}
-			targetLine := CreateLine(Point{targetLineSegments[0].x, targetLineSegments[0].y}, Point{targetLineSegments[0].x, targetLineSegments[1].y})
-
-			intersectedPoint, intersected := Intersection(line, targetLine)
-			if intersected {
-				_, hasYPointCoord := intersectionPointsMap[intersectedPoint.y]
-				if hasYPointCoord {
-					prevXpointVal, hasXPointCoord := intersectionPointsMap[intersectedPoint.y][intersectedPoint.x]
-					if hasXPointCoord {
-						intersectionPointsMap[intersectedPoint.y][intersectedPoint.x] = prevXpointVal + 1
-					} else {
-						intersectionPointsMap[intersectedPoint.y][intersectedPoint.x] = 1
-					}
-				} else {
-					intersectionPointsMap[intersectedPoint.y] = make(map[int]int)
-					intersectionPointsMap[intersectedPoint.y][intersectedPoint.x] = 1
-				}
-			}
-
-		}
-
-	}
-
-	intersectionsCounter := 0
-	for _, yPoints := range intersectionPointsMap {
-		for _, xPoints := range yPoints {
-			intersectionsCounter += xPoints
-		}
-	}
-
-	return intersectionsCounter
-}
-
-func main() {
-	inputBlob, err := ioutil.ReadFile("input.txt")
-	handleError(err)
-	fmt.Printf("At %v points at least two lines overlap.", CalcPointLinesOverlap(string(inputBlob)))
+	return -1
 }
